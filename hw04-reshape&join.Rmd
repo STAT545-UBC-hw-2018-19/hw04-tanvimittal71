@@ -1,0 +1,200 @@
+---
+title: "Homework04:Tidy data and joins"
+output: 
+  html_document:
+    keep_md: TRUE
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Load packages
+```{r load_pkg}
+suppressPackageStartupMessages(library(tidyverse))
+library(knitr)
+library(gapminder)
+library(kableExtra)
+```
+
+### Data Reshaping
+For data reshaping, I am using a portion of gapminder data.
+I will do a mix of Activity #1 and #2 on this data
+
+#### Data
+```{r data_dr}
+data_dr <- gapminder %>% 
+            filter(country %in% c("Singapore", 
+                                  "Italy",
+                                  "Russia",
+                                  "India"),
+                   year > 1951 & year < 1972) %>%
+            select(continent,country,year,lifeExp)
+kable(data_dr) %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+Converting the data for each country to show the yearly trend in one row(columns for each year)
+
+```{r spread_dr1}
+sdr <- data_dr %>%
+        spread(year, lifeExp)
+kable(sdr) %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+The above table is easy to analyse and mutate. For example if want to add a column for change in lifeExp from 1952 to 1967:
+
+```{r mutate_dr}
+sdr %>%
+  mutate(change = `1967` - `1952`) %>%
+  kable() %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+To revert the changes:
+
+```{r gather_sdr}
+sdr %>% 
+  gather(year,lifeExp,"1952","1957","1962","1967") %>%
+  kable() %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+Now lets spread the initial data to have separate columns for each country
+
+```{r spread_dr2}
+data_dr %>% 
+  spread(country,lifeExp) %>% 
+  kable() %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+Lets make a scatterplot for lifeExp of India vs Singapore
+
+#### Data of two countries:
+
+```{r scatter_data}
+data_dr %>%
+  filter(continent == "Asia") %>%
+  spread(country,lifeExp) %>%
+  kable() %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+
+#### Scatter-plot
+
+```{r scatter}
+data_dr %>%
+  filter(continent == "Asia") %>%
+  spread(country,lifeExp) %>%
+  ggplot(aes(India,Singapore)) +
+  geom_point(aes(color = year,
+                 cex=.02)) +
+  ggtitle("LifeExp India vs Singapore")
+
+```
+
+So, plot above shows that there is almost linear increase in lifeExp for both the countries.
+
+### Table join
+For table join cheatsheet I am doing Activity #2
+
+#### Data
+I am taking data of some of the shows(I like) and their ratings on IMDb.
+
+```{r data_def}
+shows <- tibble(name = c("Office","Walking Dead",
+                         "Stranger Things","Friends"), 
+                genre = c("comedy","Sci-fi",
+                          "Sci-fi","comedy"),
+                continuing = c("No","Yes","Yes","No"),
+                seasons = c(10, 9, 2, 10))
+rating <- tibble(name = c("Walking Dead", "Office",
+                          "Narcos", "Stranger Things"), 
+                 rating = c(8.4, 8.8, 9.1, 9.0))
+kable(shows, caption = "Shows") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+kable(rating, caption = "Rating") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+
+```
+
+Lets try some of the table joining functions on tables above.
+
+If I want to combine the data from above two tables for my analysis, I can use inner_join(). But if I want to discard the observations from one table which are not there in my second table without mutating the columns, I can use semi_join()
+
+```{r join1}
+ijsr <- inner_join(shows, rating)
+sjsr <- semi_join(shows,rating)
+kable(ijsr, caption = "Inner_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+kable(sjsr, caption = "Semi_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+As I did not mention the variable label to be used to join the tables, it does that by the common label found in two tibbles(name). 
+Also, as we can see semi_join(x,y) retains the data for x="shows". So, we can define x and y as per our requirement.
+
+In above both the functions data was lost. If we do not want to lose the data from our primary table, we can do so by using either left_join() or right_join()
+
+```{r join2}
+ljsr <- left_join(shows, rating)
+rjsr <- right_join(shows,rating)
+kable(ljsr, caption = "Left_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+kable(shows, caption = "Right_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+
+As you can see, left_join(x,y) retains all rows of x and right_join(x,y) retains all rows of y.
+
+If we have a huge database and want to see which observations from primary table are missing in secondary table, we can use anti_join().
+
+```{r join3}
+ajsr1 <- anti_join(shows, rating)
+ajsr2 <- anti_join(rating,shows)
+kable(ajsr1, caption = "Anti_join(Shows,Rating)") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+kable(ajsr2, caption = "Anti_join(Rating,Shows)") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+If we decide that we cannot afford to loose any data, full_join() can be used.
+
+```{r join4}
+fjsr <- full_join(shows, rating)
+kable(fjsr, caption = "Full_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+Lets see what merge() does to the data above.
+
+```{r merge_data}
+msr <- merge(shows, rating)
+kable(ijsr, caption = "Inner_join()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+kable(msr, caption = "Merge()") %>% 
+  kable_styling(c("striped", "bordered"),
+                full_width = F)
+```
+
+So, the output of merge() is same as dplyr function inner_join(). However, in inner_join(x,y), the order of output is same as x="shows" but that is not the case in merge().
