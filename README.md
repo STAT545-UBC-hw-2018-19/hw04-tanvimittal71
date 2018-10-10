@@ -1,6 +1,6 @@
 # hw04-tanvimittal71
 
-This repository is for my submission of Homework 04 for Stat545A.
+This repository is my submission of Homework 04 for Stat545A.
 
 In this assignment, I explore different table reshape and join functions.
 
